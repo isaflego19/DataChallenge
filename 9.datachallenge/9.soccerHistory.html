@@ -463,7 +463,7 @@ con la funzione load_match_results per estrarre tutte le partite del
 campionato italiano di prima divisione (Serie A) dal 1994 al 2026 in un
 unico dataset, per poi filrare le righe con date e goal non nulli e
 selezionare le colonne Date, HomeTeam, AwayTeam, FTHG (home team goals),
-FTAG (away team goals)</p>
+FTAG (away team goals).</p>
 <pre class="r"><code class="hljs"><span class="hljs-keyword">library</span>(dplyr)
 <span class="hljs-keyword">library</span>(worldfootballR)
 <span class="hljs-keyword">library</span>(tidyverse)
@@ -473,7 +473,14 @@ partite &lt;- load_match_results(
   gender = <span class="hljs-string">"M"</span>,
   tier = <span class="hljs-string">"1st"</span>, 
   season_end_year = <span class="hljs-number">1994</span>:<span class="hljs-number">2026</span>
-  ) |&gt;
+  ) 
+colnames(partite)</code></pre>
+<pre><code class="hljs">##  [1] "Competition_Name" "Gender"           "Country"          "Season_End_Year" 
+##  [5] "Round"            "Wk"               "Day"              "Date"            
+##  [9] "Time"             "Home"             "HomeGoals"        "Home_xG"         
+## [13] "Away"             "AwayGoals"        "Away_xG"          "Attendance"      
+## [17] "Venue"            "Referee"          "Notes"            "MatchURL"</code></pre>
+<pre class="r"><code class="hljs">partite &lt;- partite |&gt;
   filter(!is.na(HomeGoals) &amp; !is.na(AwayGoals) &amp; !is.na(Date)) |&gt;
   select(
     Season = Season_End_Year,
@@ -489,7 +496,8 @@ partite &lt;- load_match_results(
 <h3>punto 3</h3>
 <p>Per analizzzare le statistiche ho aggiunnto la colonna dell’esito
 della partita (H = vittoria della squadra di casa, A = vittoria della
-squadra ospite, P = pareggio)</p>
+squadra ospite, P = pareggio), ho attribuito alla squadra i punti della
+parita giocata e i goal fatti/subiti.</p>
 <pre class="r"><code class="hljs">partite2 &lt;- partite |&gt;
  mutate(
     result = case_when(
@@ -497,10 +505,8 @@ squadra ospite, P = pareggio)</p>
       FTHG &lt; FTAG ~ <span class="hljs-string">"A"</span>,
       FTHG == FTAG ~ <span class="hljs-string">"P"</span>
     )
-  )</code></pre>
-<pre class="r"><code class="hljs">partite3 &lt;- 
+  ) |&gt;
   pivot_longer(
-    partite2,
     cols = c(<span class="hljs-string">"HomeTeam"</span>, <span class="hljs-string">"AwayTeam"</span>),
     names_to = <span class="hljs-string">"HomeAway"</span>,
     values_to = <span class="hljs-string">"Team"</span>
@@ -521,11 +527,26 @@ squadra ospite, P = pareggio)</p>
       HomeAway == <span class="hljs-string">"AwayTeam"</span> ~ FTHG
     )
   ) |&gt;
-  arrange(Team)</code></pre>
+  arrange(Team)
+partite2</code></pre>
+<pre><code class="hljs">## # A tibble: 22,754 × 10
+##    Season Date        FTHG  FTAG result HomeAway Team   points    GF    GS
+##     &lt;int&gt; &lt;date&gt;     &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;    &lt;chr&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1   2004 2003-09-01     0     2 A      HomeTeam Ancona      0     0     2
+##  2   2004 2003-09-14     3     1 H      AwayTeam Ancona      0     1     3
+##  3   2004 2003-09-20     1     1 P      HomeTeam Ancona      1     1     1
+##  4   2004 2003-09-28     3     0 H      AwayTeam Ancona      0     0     3
+##  5   2004 2003-10-05     0     3 A      HomeTeam Ancona      0     0     3
+##  6   2004 2003-10-18     2     3 A      HomeTeam Ancona      0     2     3
+##  7   2004 2003-10-26     0     0 P      AwayTeam Ancona      1     0     0
+##  8   2004 2003-11-02     0     0 P      HomeTeam Ancona      1     0     0
+##  9   2004 2003-11-09     3     0 H      AwayTeam Ancona      0     0     3
+## 10   2004 2003-11-23     1     1 P      HomeTeam Ancona      1     1     1
+## # ℹ 22,744 more rows</code></pre>
 <p>Infine ho creato una tabella con num di partite giocate, vittorie
 (totali, casa, trasferta), pareggi, sconfitte, goal fatti e subiti,
 punti totali e media dei punti per partita.</p>
-<pre class="r"><code class="hljs">tabella_finale &lt;- partite3 |&gt;
+<pre class="r"><code class="hljs">tabella_finale &lt;- partite2 |&gt;
   group_by(Team) |&gt;
   summarise(
     Matches = n(),
@@ -539,16 +560,31 @@ punti totali e media dei punti per partita.</p>
     Points = sum(points),
     Mean = Points/Matches
   ) |&gt;
-  arrange(-Points)</code></pre>
+  arrange(-Points)
+tabella_finale</code></pre>
+<pre><code class="hljs">## # A tibble: 53 × 11
+##    Team       Matches   Win HomeWin AwayWin Draws Loses    GF    GS Points  Mean
+##    &lt;chr&gt;        &lt;int&gt; &lt;int&gt;   &lt;int&gt;   &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;
+##  1 Juventus      1137   697     409     288   276   164  2012   961   2367  2.08
+##  2 Inter         1175   639     371     268   283   253  2075  1210   2200  1.87
+##  3 Milan         1175   613     353     260   312   250  1924  1189   2151  1.83
+##  4 Roma          1175   594     364     230   309   272  2016  1301   2091  1.78
+##  5 Lazio         1175   561     336     225   285   329  1895  1362   1968  1.67
+##  6 Fiorentina    1073   433     280     153   303   337  1577  1318   1602  1.49
+##  7 Napoli         891   433     253     180   227   231  1438  1010   1526  1.71
+##  8 Udinese       1141   402     239     163   300   439  1481  1566   1506  1.32
+##  9 Atalanta       963   357     209     148   266   340  1353  1249   1337  1.39
+## 10 Parma          909   321     215     106   260   328  1187  1220   1223  1.35
+## # ℹ 43 more rows</code></pre>
 </div>
 <div id="punto-4" class="section level3">
 <h3>punto 4</h3>
 <p>Quali squadre hanno la percentuale più elevata di vittorie in casa
 rispetto alle sue partite totali?</p>
-<p>Qual è la squadra che ha la differenza reti minore per partita
-nell’intero periodo in cui ha giocato?</p>
-<p>Esiste una squadra che ha ottenuto più vittorie in trasferta rispetto
-a quelle ottenute in casa?</p>
+<p>Qual è la squadra che ha la media minore di differenza reti per
+partita nell’intero periodo in cui ha giocato?</p>
+<p>Quante e quali squadre che hanno giocato almeno 10 stagioni hanno una
+media di goal fatti a partita uguale o superiore a 1.5?</p>
 </div>
 
 

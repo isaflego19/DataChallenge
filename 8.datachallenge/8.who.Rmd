@@ -1,0 +1,80 @@
+---
+title: "Tidy the WHO dataset"
+author: "Isabella Flego"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyr)
+library(dplyr)
+who <- who
+```
+
+### step 1: gather
+```{r}
+who1 <- who |>
+  pivot_longer(
+   cols = new_sp_m014:newrel_f65,
+   names_to = "key",
+   values_to = "cases",
+   values_drop_na = TRUE)
+who1
+```
+
+### Step 2: replace
+```{r}
+who2 <- who1 |>
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel"))
+who2
+```
+
+### Step 3: separate
+```{r}
+who3 <- who2 |> 
+  separate(
+    col = key,
+    into = c("new", "type", "sexage"),
+    sep = "_")
+who3
+```
+
+```{r}
+who4 <- who3 |> 
+  separate(
+  col = sexage,
+  into = c("sex", "age"),
+  sep = 1)
+who4
+```
+
+```{r}
+who5 <- who4 |> 
+  mutate(age = stringr::str_replace(age, "014", "0014")) |>
+  mutate(age = stringr::str_replace(age, "65", "65100")) |>
+  separate(age, into = c("age_low", "age_high"), sep = 2)
+who5
+```
+
+### Step 4: drop
+```{r}
+who5 |>  count(new)
+
+who6 <- who5 |> 
+  select(-new, -iso2, -iso3)
+who6
+```
+
+### Last step
+```{r}
+whofinal <- who |>
+  pivot_longer(cols = new_sp_m014:newrel_f65, names_to = "key", values_to = "cases", values_drop_na = TRUE) |> 
+  mutate(key = stringr::str_replace(key, "newrel", "new_rel")) |> 
+  separate(col = key, into = c("new", "type", "sexage"), sep = "_") |>
+  separate(col = sexage, into = c("sex", "age"), sep = 1) |>
+  mutate(age = stringr::str_replace(age, "014", "0014")) |>
+  mutate(age = stringr::str_replace(age, "65", "65100")) |>
+  separate(age, into = c("age_low", "age_high"), sep = 2) |>
+  select(-new, -iso2, -iso3)
+
+whofinal  
+```

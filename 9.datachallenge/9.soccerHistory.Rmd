@@ -6,20 +6,14 @@ editor_options:
   chunk_output_type: inline
 ---
 
-```{r setup, include=FALSE}
-# cache results
-knitr::opts_chunk$set(cache=FALSE, echo = TRUE, eval = FALSE, message=FALSE, warning = FALSE, fig.align='center')
-```
-
 ### punto 1
 
 Per ottenere i dati della Serie A dal 1993 ad oggi da football-data.co.uk, ho pensato di analizzare la struttura degli URL dei CSV e utilizzare un ciclo for per generare i link di ogni stagione, scaricare in automatico i file ed unirli in un unico dataset finale.
 
 ### punto 2
 
-Per raccogliere i dati, ho utilizzato il pacchetto R worldfootballR con la funzione load_match_results per estrarre tutte le partite del campionato italiano di prima divisione (Serie A) dal 1994 al 2026 in un unico dataset, per poi filrare le righe con date e goal non nulli e selezionare le colonne Date, HomeTeam, AwayTeam, FTHG (home team goals), FTAG (away team goals)
-
-```{r}
+Per raccogliere i dati, ho utilizzato il pacchetto R worldfootballR con la funzione load_match_results per estrarre tutte le partite del campionato italiano di prima divisione (Serie A) dal 1994 al 2026 in un unico dataset, per poi filrare le righe con date e goal non nulli e selezionare le colonne Date, HomeTeam, AwayTeam, FTHG (home team goals), FTAG (away team goals).
+```{r warning=FALSE, message=FALSE}
 library(dplyr)
 library(worldfootballR)
 library(tidyverse)
@@ -29,7 +23,12 @@ partite <- load_match_results(
   gender = "M",
   tier = "1st", 
   season_end_year = 1994:2026
-  ) |>
+  ) 
+colnames(partite)
+```
+
+```{r}
+partite <- partite |>
   filter(!is.na(HomeGoals) & !is.na(AwayGoals) & !is.na(Date)) |>
   select(
     Season = Season_End_Year,
@@ -44,7 +43,7 @@ partite <- load_match_results(
 
 ### punto 3
 
-Per analizzzare le statistiche ho aggiunnto la colonna dell'esito della partita (H = vittoria della squadra di casa, A = vittoria della squadra ospite, P = pareggio)
+Per analizzzare le statistiche ho aggiunnto la colonna dell'esito della partita (H = vittoria della squadra di casa, A = vittoria della squadra ospite, P = pareggio), ho attribuito alla squadra i punti della parita giocata e i goal fatti/subiti.
 
 ```{r}
 partite2 <- partite |>
@@ -54,13 +53,8 @@ partite2 <- partite |>
       FTHG < FTAG ~ "A",
       FTHG == FTAG ~ "P"
     )
-  )
-```
-
-```{r}
-partite3 <- 
+  ) |>
   pivot_longer(
-    partite2,
     cols = c("HomeTeam", "AwayTeam"),
     names_to = "HomeAway",
     values_to = "Team"
@@ -82,12 +76,13 @@ partite3 <-
     )
   ) |>
   arrange(Team)
+partite2
 ```
 
 Infine ho creato una tabella con num di partite giocate, vittorie (totali, casa, trasferta), pareggi, sconfitte, goal fatti e subiti, punti totali e media dei punti per partita.
 
 ```{r}
-tabella_finale <- partite3 |>
+tabella_finale <- partite2 |>
   group_by(Team) |>
   summarise(
     Matches = n(),
@@ -102,12 +97,13 @@ tabella_finale <- partite3 |>
     Mean = Points/Matches
   ) |>
   arrange(-Points)
+tabella_finale
 ```
 
 ### punto 4
 
 Quali squadre hanno la percentuale più elevata di vittorie in casa rispetto alle sue partite totali?
 
-Qual è la squadra che ha la differenza reti minore per partita nell'intero periodo in cui ha giocato?
+Qual è la squadra che ha la media minore di differenza reti per partita nell'intero periodo in cui ha giocato?
 
-Esiste una squadra che ha ottenuto più vittorie in trasferta rispetto a quelle ottenute in casa?
+Quante e quali squadre che hanno giocato almeno 10 stagioni hanno una media di goal fatti a partita uguale o superiore a 1.5?
