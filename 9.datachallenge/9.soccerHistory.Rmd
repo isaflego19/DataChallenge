@@ -104,6 +104,6 @@ tabella_finale
 
 Quali squadre hanno la percentuale più elevata di vittorie in casa rispetto alle sue partite totali?
 
-Qual è la squadra che ha la media minore di differenza reti per partita nell'intero periodo in cui ha giocato?
+Qual è la squadra che ha subito meno goal per partita nell'intero periodo in cui ha giocato?
 
 Quante e quali squadre che hanno giocato almeno 10 stagioni hanno una media di goal fatti a partita uguale o superiore a 1.5?
