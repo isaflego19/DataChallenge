@@ -1,0 +1,210 @@
+---
+title: "The Elo method in chess"
+author: "Isabella Flego"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE, message=FALSE)
+```
+
+```{r}
+library(dplyr)
+library(tidyverse)
+data <- read.csv("data.csv")
+head(data)
+```
+
+### domanda 1
+```{r}
+partite_tot = nrow(data)
+vittorie_bianco = sum(data$Score == 1)
+vittorie_nero = sum(data$Score == 0)
+pareggi = sum(data$Score == 0.5)
+
+if(vittorie_bianco > vittorie_nero) {
+  cat ("L'analisi dei risultati mostra un vantaggio per chi muove per primo: infatti i giocatori con i pezzi bianchi hanno registrato " ,vittorie_bianco, " vittorie, contro le " ,vittorie_nero, " di chi ha giocato con il nero.")
+} else {
+  cat ("L'analisi dei risultati non mostra un vantaggio per chi muove per primo: i giocatori con i pezzi bianchi hanno registrato " ,vittorie_bianco, " vittorie, contro le " ,vittorie_nero, " di chi ha giocato con il nero.")
+}
+```
+
+### domanda 2
+
+```{r}
+classifica <- data |>
+  pivot_longer(
+    cols = c("White", "Black"),
+    names_to = "WhiteBlack",
+    values_to ="Giocatore"
+  ) |>
+  mutate(
+    Punti = case_when(
+      (Score == 1 & WhiteBlack == "White") ~ 1,
+      (Score == 1 & WhiteBlack == "Black") ~ 0,
+      (Score == 0 & WhiteBlack == "White") ~ 0,
+      (Score == 0 & WhiteBlack == "Black") ~ 1,
+      TRUE ~ 0.5
+    )
+  ) |>
+  group_by(Giocatore) |>
+  summarize (
+    Punti = sum(Punti),
+    NumPartite = n()
+  )
+
+classifica
+```
+
+```{r}
+distribuzione_punteggi <- ggplot(data = classifica) +
+  geom_freqpoly(mapping = aes(x = Punti), na.rm = TRUE) +
+  scale_x_continuous(limits = c(0, NA)) +
+  labs(
+    title = "Distribuzione dei punti dei giocatori",
+    x = "Punti Giocatore",
+    y = "Frequenza"
+  )
+
+distribuzione_punteggi
+```
+
+Il grafico mostra una distribuzione dei punti totali non lineare, con un picco in corrispondenza dello zero e con una coda verso i valori più alti: questo significa che la maggioranza dei giocatori ha un punteggio basso (dato dal numero basso di parite giocate o vinte) e che solamente poche persone riescono a ottenere punteggi elevati.
+
+
+### domanda 3
+I giocatori inizialmente hanno punteggio pari a 0. Nel momento in cui i giocatori $i$ e $j$ si affrontano, i loro punteggi si aggiornano secondo la regola: $$
+\begin{array}{lll}
+r_{i} & \leftarrow & r_i + \kappa (s_{i,j} - \mu_{i,j}) 
+\\
+r_j & \leftarrow & r_j + \kappa (s_{j,i} - \mu_{j,i})
+\end{array}
+$$ Da questa regola, è possibile trovare la formula della variazione $\Delta r$ per ogni giocatore: $$
+\begin{array}{lll}
+\Delta r_{i} & = & \kappa (s_{i,j} - \mu_{i,j}) \\
+\Delta r_{j} & = & \kappa (s_{j,i} - \mu_{j,i}) \\
+\end{array}
+$$
+
+calcolando la variazione totale di $\Delta r_{i}$ e $\Delta r_{i}$ ottengo $$
+\Delta r_{i} +\Delta r_{i} = \kappa (s_{i,j} - \mu_{i,j}) + \kappa (s_{j,i} - \mu_{j,i})
+$$ raccogliendo $\kappa$ $$
+\Delta r_{i} +\Delta r_{i} = \kappa (s_{i,j} - \mu_{i,j} + s_{j,i} - \mu_{j,i}) \\
+\Delta r_{i} +\Delta r_{i} = \kappa (s_{i,j} + s_{j,i} - (\mu_{i,j} + \mu_{j,i}))
+$$ Sapendo che $s_{i,j} + s_{j,i}=1$ e $\mu_{i,j} + \mu_{j,i} =1$ sostituisco all'equazione precedente:\
+$$
+\Delta r_{i} +\Delta r_{i} = \kappa (0 - 0)
+$$ 
+Dato che la variazione totale è sempre pari a zero, significa che la somma di tutti i punti del torneo si mantiene costante, dimostrando così la conservazione del punteggio totale (uguale a 0).
+
+### domanda 4
+
+```{r}
+calcola_elo <- function(data, C = 400, k = 25) {
+  
+  #creo vettore con id giocatori e punteggio iniziale di elo = 0
+  giocatori <- unique(c(data$White, data$Black))
+  elo <- setNames(rep(0, length(giocatori)), giocatori)
+  
+  # Aggiorno il rating partita per partita
+  for (i in 1:nrow(data)) {
+    
+    bianco <- as.character(data$White[i])
+    nero <- as.character(data$Black[i])
+    
+    # Punteggio effettivo del Bianco
+    s_bianco <- data$Score[i]
+    
+    # Punteggio atteso del Bianco
+    atteso_bianco <- 1 / (1 + 10^((elo[nero] - elo[bianco]) / C))
+    
+    # Variazione del rating
+    delta <- k * (s_bianco - atteso_bianco)
+    
+    # Aggiorno i rating dei due giocatori
+    elo[bianco] <- elo[bianco] + delta
+    elo[nero] <- elo[nero] - delta
+  }
+  
+  return(elo)
+}
+
+classificaElo <- calcola_elo(data)
+
+classificaElo <- tibble(
+  Giocatore = as.numeric(names(classificaElo)),
+  PuntiElo = as.numeric(classificaElo)
+  ) |>
+  arrange(Giocatore)
+
+classificaElo
+```
+
+```{r}
+ggplot() +
+  geom_freqpoly(data = classifica, aes(x = Punti, color = "Punti")) +
+  geom_freqpoly(data = classificaElo, aes(x = PuntiElo, color = "Punti Elo")) +
+  labs(
+    title = "Confronto distribuzione punti classifica generale vs classifica Elo",
+    x = "Punteggio giocatori",
+    y = "Frequenza",
+    color = "Legenda"
+  )
+```
+
+La distribuzione dei punti Elo ammette anche valori negativi, a differenza della classifica generale che prevede solo punteggi positivi o nulli. Proprio per questa modalità di assegnamento di punti si può notare che il picco massimo dei punti generali è più elevata perchè non vengono mai sottratti al giocatore, anche in caso di perdita. Nonostante questo entrambe le curve mostrano un andamento simile, con frequenza massima concentrata  attorno allo zero e dimunuzione con l'aumentare del punteggio.
+
+```{r}
+somma = sum(classificaElo$PuntiElo)
+cat("La proprietà per cui la somma dei punteggi Elo sia uguale a zero è verificata: il valore ottenuto è ", somma, ", un numero estremamente piccolo, probabilmente dovuto a errori di approssimazione.")
+```
+
+### domanda 5
+
+```{r}
+confronto <- full_join(classificaElo, classifica ,by="Giocatore")
+confronto
+```
+
+
+```{r}
+correlazione <- ggplot(data = confronto, mapping = aes(x = Punti, y = PuntiElo)) +
+  geom_point() +
+  labs(
+    x = "Punteggio classifica generale", 
+    y = "Punteggio Elo",
+    title = "Correlazione classifica generale vs Elo") +
+  geom_smooth()
+  
+correlazione
+```
+
+Tra la classifica generale e quella Elo esiste una correlazione positiva ma non lineare: tendenzialmente, all'aumentare dei punti generali crescono anche i punti Elo. Tuttavia, i vertici delle due graduatorie non coincidono: il giocatore con il punteggio Elo più alto in assoluto, infatti, registra un valore nettamente inferiore rispetto a quello raggiunto dai primi della classifica generale, e viceversa.
+
+### domanda 6
+```{r}
+partite_punteggio <- ggplot(data = confronto, mapping = aes(x = Punti, y = NumPartite)) +
+  geom_point() +
+  labs(
+    x = "Punteggio", 
+    y = "Partite giocate",
+    title = "Correlazione tra partite giocate e punteggio generale") +
+  geom_smooth(color="red")
+
+partite_punteggioElo <- ggplot(data = confronto, mapping = aes(x = PuntiElo, y = NumPartite)) +
+  geom_point() +
+  labs(x = "Punteggio Elo", 
+       y = "Partite giocate",
+       title = "Correlazione tra partite giocate e punteggio Elo") +
+  geom_smooth(color="blue")
+
+partite_punteggio
+partite_punteggioElo
+```
+
+
+Tra il numero di partite giocate e il punteggio in classifica generle esiste una correlazione lineare positiva tra le partite giocate e il punteggio generale: all'aumentare delle partite giocate, il punteggio cresce in modo diretto e proporzionale.
+
+Invece tra le partite giocate e il punteggio Elo la correlzione non è lineare: per i punteggi negativi o vicini allo zero non c'è una relzione precisa, mentre per i punteggi positivi si evidenzia una correlazione positiva, in cui all'aumentare delle partite cresce anche il punteggio Elo.
