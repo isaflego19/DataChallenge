@@ -1,0 +1,94 @@
+---
+title: "Concentration of S&P 500 index"
+output: html_document
+author: "Isabella Flego"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, echo = TRUE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(tidyquant)
+library(ineq)
+```
+
+```{r}
+tq_index_options()
+sp500 <- tq_index("SP500")
+
+write_csv(sp500, "data/sp500.csv")
+sp500 <- read_csv("data/sp500.csv")
+sp500
+```
+
+### domanda 1
+Quanto è diseguale il peso delle singole aziende nell'indice S&P 500?
+```{r}
+distribuzione <- ggplot(sp500, aes(x=weight)) +
+  geom_histogram() +
+  labs(
+    title= "Distribuzione dei pesi delle aziende",
+    x = "Pesi delle aziende",
+    y = "Numero aziende"
+  ) +
+  theme_minimal() +
+  scale_x_log10(labels = scales::percent)
+distribuzione
+```
+
+Il grafico mostra una grande diseguaglianza nella distrubuzione dei pesi tra le varie aziende: la maggior parte delle società rientra in una fascia compresa tra 0,01% e 1%, mentre pochissime piccole aziende raggiungono poco più dello 0% e solamente poche altre superano 1% del peso totale dell'indice.
+
+
+### domanda 2
+
+Quale quota dell'indice è rappresentata dalle sue società più grandi?
+
+```{r}
+total_weight = sum(sp500$weight)
+
+sp500_top10 <- sp500 |>
+  arrange(-weight) |>
+  head(10)
+top10_weight = sum(sp500_top10$weight)
+top10_weight = top10_weight * 100
+
+cat("Le prime 10 aziende rappresentano il " ,top10_weight, "% del peso totale dell'indice")
+```
+
+### domanda 3
+
+Cosa ci dice la curva di Lorenz sulla concentrazione?
+
+```{r}
+lorenz <- Lc(sp500$weight)
+tib_lorenz <- tibble(
+  p_company = lorenz$p,
+  p_weight = lorenz$L
+)
+
+curvaLorenz <- ggplot(tib_lorenz, aes(x = p_company, y = p_weight)) +
+  geom_line(color = "blue", linewidth = 1) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(
+    title = "Curva di Lorenz",
+    x = "percentuale cumulativa delle aziende",
+    y = "percentuale cumulativa del peso"
+  )
+curvaLorenz
+```
+
+La Curva di Lorenz mostra che circa l'80-90% delle aziende rappresenta neanche il 25-30% del peso complessivo; e quindi il restante 10% delle grandi aziende detiene oltre il 70% del valore complessivo.
+
+
+### domanda 4
+
+Qual è il coefficiente di Gini dei pesi dell'indice S&P 500?
+
+```{r}
+gini=Gini(sp500$weight)
+gini
+```
+
+Il peso delle aziende nell'S&P 500 è estremamente disomogeneo, come confermato dall'indice di Gini molto elevato.

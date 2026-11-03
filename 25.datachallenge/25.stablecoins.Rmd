@@ -1,0 +1,142 @@
+---
+title: "Stablecoins — compare USDC, USDT and DAI transaction sizes and volumes"
+output: html_document
+author: "Isabella Flego"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = TRUE, message = FALSE, warning=FALSE)
+```
+
+```{r}
+library(usethis)
+library(tidyverse)
+library(httr2)
+
+edit_r_environ()
+api_key <- Sys.getenv("ETHERSCAN_API_KEY")
+USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+DAI  = "0x6b175474e89094c44da98b954eedeac495271d0f"
+```
+
+
+```{r}
+load  <- function(address)
+  usdc <- request("https://api.etherscan.io/v2/api") |>
+  req_url_query(
+    chainid = 1,
+    module = "account",
+    action = "tokentx",
+    contractaddress = address,
+    startblock = 0,
+    endblock = 99999999,
+    page = 1,
+    offset = 1000,
+    sort = "asc",
+    apikey = api_key
+  ) |>
+  req_perform() |>
+  resp_body_json(simplifyVector = TRUE)
+
+usdc <- load(USDC)
+usdt <- load(USDT)
+dai <- load(DAI)
+
+write_rds(usdc, "data/usdc.rds")
+write_rds(usdt, "data/usdt.rds")
+write_rds(dai, "data/dai.rds")
+```
+
+
+```{r}
+clean <- function(nome) {
+  nome$result |>
+  as_tibble() |>
+  transmute(
+    tokenName,
+    value,
+    amount = as.numeric(value) / 10^as.numeric(tokenDecimal),
+    from,
+    to,
+    tokenSymbol,
+    tokenDecimal
+    )
+}
+
+usdc_df <- clean(usdc)
+usdt_df <- clean(usdt)
+dai_df  <- clean(dai)
+
+usdc_df
+usdt_df
+dai_df
+```
+
+
+```{r}
+# unione dei tre df
+all_df <- bind_rows(usdc_df, usdt_df, dai_df)
+all_df
+```
+
+### domanda 1
+In che modo differiscono le loro dimensioni di trasferimento?
+```{r}
+ggplot(all_df, aes(x = tokenSymbol, y = amount)) +
+  geom_boxplot() +
+  scale_y_log10() +
+  labs(
+    title = "Distribuzione dimensioni delle transazioni per stablecoin",
+    x = "Stablecoin",
+    y = "Dimensione Transazioni"
+  ) +
+  theme_minimal()
+```
+
+Il boxplot mostra la distrubuzione della dimensione delle transazioni di DAI, USDC, USDT: DAI ha la mediana più bassa (attorno a $10^1$) e un intervallo interquartile piccolo; quindi la maggior parte delle sue transazioni sono di importi simili tra loro e non troppo elevati. UDSC invece ha come mediana un valore di circa $10^2$-$10^3$, ma la scatola è più ampia il che significa che c'è maggiore variabilità nei volumi nelle transazioni. USDT ha la mediana più alta, quasi di $10^4$ che indica la prevalenza di trasferimenti con importi superiori rispetto alle altre due stablecoin.
+
+
+```{r}
+statistics <- function(nome) {
+  nome |>
+    group_by(tokenSymbol) |>
+    summarise (
+      totale = sum(amount, na.rm = TRUE),
+      media = mean(amount, na.rm = TRUE),
+      mediana = median(amount, na.rm = TRUE),
+      massimo = max(amount, na.rm = TRUE),
+      minimo = min(amount, na.rm = TRUE)
+    )
+}
+
+usdc_statistics <- statistics(usdc_df)
+usdt_statistics <- statistics(usdt_df)
+dai_statistics <- statistics(dai_df)
+
+statistics_tot <- bind_rows(usdc_statistics, usdt_statistics, dai_statistics)
+statistics_tot
+```
+
+La tabella conferma ciò che è stato osservato nel boxplot: la mediana cresce nettamente da DAI a USDC fino a USDT. Mentre DAI registra i valori più bassi e USDC ha valori intermedi, USDT registra anche la media e il massimo più elevati, a conferma della maggiore entità dei suoi trasferimenti.
+
+
+
+### domanda 2
+Quanto volume di transazioni genera ciascuna stablecoin?
+```{r}
+volume_tot <- statistics_tot |>
+  select(tokenSymbol, totale)
+volume_tot
+
+ggplot(statistics_tot, aes(x = tokenSymbol, y = totale, fill = tokenSymbol)) +
+  geom_col() +
+  labs(
+    title = "Volume totale generato per Stablecoin",
+    x = "Stablecoin",
+    y = "Volume Totale"
+  ) +
+  theme_minimal()
+```
+
+La tabella e il grafico a barre evidenziano la notevole differenza di volume generato tra le stablecoin: DAI, quasi impercettibile nel grafico, registra un valore di circa 2,62 milioni; USDC, a un livello intermedio, raggiunge circa 113,6 milioni; infine, USDT registra il volume massimo con oltre 265 milioni.
