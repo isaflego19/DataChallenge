@@ -1,0 +1,96 @@
+---
+title: "How life expectancy change over time for each continent?"
+output:
+  html_document:
+    theme: spacelab
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# cache results
+knitr::opts_chunk$set(cache=TRUE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(gapminder)
+library(ggplot2)
+```
+
+### domanda 1
+
+Ricavare una formula per calcolare l'aspettativa di vita di un continente
+
+Per ciascun continente e per ogni anno, l'aspettativa di vita può essere calcolata come media ponderata: si moltiplica l'aspettativa di vita di ogni paese per la relativa popolazione, si sommano i prodotti ottenuti all'interno del continente e infine si divide il totale per la popolazione complessiva del continente stesso. 
+
+$$LE_{\text{continente}} = \frac{\sum_{\text{paese} \in C} (LE_{\text{paese}} \times Pop_{\text{paese}})}{\sum_{\text{paese} \in C} Pop_{\text{paese}}}$$
+
+```{r}
+lifeExpContinenti <- gapminder |>
+  mutate(lifepop = lifeExp * pop) |>
+  group_by(continent, year) |>
+   summarize(
+     popTot = sum(pop),
+     lifePopTot = sum(lifepop)
+   ) |>
+  mutate(lifeExpCont = lifePopTot/popTot) |>
+  select(-lifePopTot, -popTot)
+
+lifeExpContinenti
+```
+
+### domanda 2
+
+tracciare come l'aspettativa di vita è cambiata nel tempo per ciascun continente
+
+```{r}
+plot <- ggplot(data = lifeExpContinenti, 
+               mapping = aes(x = year, y = lifeExpCont, color = continent)) +
+  geom_line() +
+  geom_point() +
+  labs(
+    title="Aspettativa di vita per continente",
+    x="anno",
+    y="aspettativa di vita"
+  )+
+  theme_minimal()
+
+plot
+```
+
+Dal grafico si nota un aumento dell'aspettativa di vita globale tra il 1952 e il 2007, con l'Oceania che mantiene i valori più alti, seguita da Europa, Americhe, Asia e Africa. Tra i primi tre continenti il divario rimane pressoché costante nel tempo. L'Asia, che inizialmente registra valori molto bassi, a partire dagli anni '60 mostra un forte incremento che la avvicina agli altri continenti. L'Africa, invece, rimane sui valori più bassi e tra la fine degli anni '80 e il 2000 rimane costante. 
+
+
+### domanda 3
+fai lo stesso per l'intero pianeta
+
+```{r}
+lifeExpPianeta <- gapminder |>
+  mutate(lifepop = lifeExp * pop) |>
+  group_by(year) |>
+   summarize(
+     popTot = sum(pop),
+     lifePopTot = sum(lifepop)
+   ) |>
+  mutate(lifeExpPlanet = lifePopTot/popTot) |>
+  select(-lifePopTot, -popTot)
+
+lifeExpPianeta
+```
+
+```{r}
+plot2 <- ggplot(data = lifeExpPianeta, 
+               mapping = aes(x = year, y = lifeExpPlanet)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(
+    title="Aspettativa di vita per il pianeta",
+    x="anno",
+    y="aspettativa di vita"
+  )+
+  theme_minimal()
+
+plot2
+```
+
+Dal grafico si nota la crescita dell'aspettativa di vita globale tra il 1957 e il 2007, che passa da poco meno di 50 anni a più di 67. Dopo un'iniziale salita e una fase di stallo, dal 1962 circa si registra una forte accelerazione per circa 5 anni per poi contiuare a crescere in modo costante.

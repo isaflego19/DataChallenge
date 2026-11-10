@@ -1,0 +1,114 @@
+---
+title: "Diamonds quality"
+output:
+  html_document:
+    theme: spacelab
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+# cache results
+knitr::opts_chunk$set(cache=TRUE, message=FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+diamonds <- ggplot2::diamonds |>
+  select(-depth, -table, -x, -y, -z)
+diamonds
+```
+
+### domanda 1
+
+Innanzitutto, si noti che i diamanti di bassa qualità (per quanto riguarda taglio, colore e purezza) sono più costosi.
+
+Ricordiamo che:
+
+- Il taglio migliore è Ideale, il peggiore è Discreto
+
+- Il colore migliore è D, il peggiore è J
+
+- La chiarezza migliore è IF, la peggiore è I1
+
+```{r}
+plot_diamanti <- function(nome) {
+  nome_testo <- rlang::as_label(rlang::enquo(nome))
+  ggplot(diamonds, aes(x = {{ nome }}, y = price, fill = {{ nome }})) +
+    geom_boxplot(
+      outlier.alpha = 0.1,
+      outlier.size = 0.8,
+      show.legend = FALSE
+    ) +
+    scale_y_log10() +
+    labs(
+      title = paste("Diamond price based on", nome_testo),
+      x = nome_testo, 
+      y = "price"
+    ) +
+    theme_minimal()
+}
+
+plot_diamanti(cut)
+plot_diamanti(color)
+plot_diamanti(clarity)
+```
+
+Osservando i tre grafici si può notare che i diamanti di bassa qualità (Fair, J, I1) hanno un prezzo mediano più elevato rispetto ai diamanti di qualità maggiore (Ideal, D, IF).
+
+
+### domanda 2
+
+Utilizzando dei modelli, trova una spiegazione e risolvi l'apparente paradosso
+
+Analizzando le variabili separatamente, la qualità sembra ridurre il valore del diamante, probabilmente perchè le analisi non tengono in considerazione le altre caratteristiche. E' quindi importante considerare l'insieme di tutti i fattoti contemporaneamente del diamante traminte un modello
+
+```{r}
+diamonds <- diamonds |> 
+  mutate(
+   cut = factor(cut, levels = c("Fair", "Good", "Very Good", "Premium", "Ideal")),
+    color = factor(color, levels = c("J", "I", "H", "G", "F", "E", "D")),
+    clarity = factor(clarity, levels = c("I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF"))
+  )
+
+modello <- lm(log10(price) ~ log10(carat) + cut + color + clarity, data = diamonds)
+summary(modello)
+```
+
+Valutando l'effetto delle caratteristiche qualitative a parità di tutte le altre condizioni, l'aumento della qualità porta sempre a un incremento stimato del prezzo, infatti tutti i coefficienti per taglio, colore e chiarezza mostrano trend positivi e crescenti. Inoltre osservando la tabella è possibile dire che la caratteristica che pesa di più in modo significativo sul prezzo del diamante sono i carati.
+
+Per risolvere il paradosso, è possibile stimare un modello basato solo sul prezzo e sui carati. Analizzando i residui tramite i boxplot per le diverse caratteristiche è possibile confrontare i diamanti a parità di caratura.
+
+```{r}
+modello_carati <- lm(log10(price) ~ log10(carat), data = diamonds)
+
+diamonds_res <- diamonds |>
+  mutate(price_res = resid(modello_carati))
+diamonds_res
+```
+
+```{r}
+plot_residui <- function(nome) {
+  nome_testo <- rlang::as_label(rlang::enquo(nome))
+  ggplot(diamonds_res, aes(x = {{ nome }}, y = price_res, fill = {{ nome }})) +
+    geom_boxplot(
+      outlier.alpha = 0.1,
+      outlier.size = 0.8,
+      show.legend = FALSE
+    ) +
+    labs(
+      x = nome_testo, 
+      y = "price_res"
+    ) +
+    theme_minimal()
+}
+
+plot_residui(cut)
+plot_residui(color)
+plot_residui(clarity)
+```
+
+I grafici dimostrano che, a parità di carati, il prezzo aumenta insieme alla qualità: le mediane crescono in modo ordinato per il taglio (da Fair ad Ideal), per la purezza (da I1 ad IF) e per il colore (da J a D).
