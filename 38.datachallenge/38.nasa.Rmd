@@ -51,8 +51,6 @@ temp
 
 ```
 
-
-
 ## Creative challenge
 
 ```{r}
@@ -68,11 +66,10 @@ ggplot(temp, aes(x = month, y = anomaly, group = Year, color = Year)) +
     panel.grid.minor = element_blank()
   )
 
-ggsave("art1.png", width = 10, height = 7, dpi = 300)
+ggsave("grafico1.png", width = 10, height = 7, dpi = 300)
 ```
 
-Questa visualizzazione artistica dei dati climatici della NASA rappresenta i mesi dell'anno sull'asse orizzontale e le anomalie termiche su quello verticale, tracciando ogni singolo anno dal 1880 al 2025 come una linea spezzata continua. La scala cromatica passa dai toni caldi del giallo dei primi anni dello studio, fino alle sfumature più scure di viola degli anni recenti. Attraverso questo grafico, si nota chiaramente come le temperature si siano progressivamente innalzate: le linee dei primi anni si mantengono sotto lo zero, indicando anomalie negative e quindi periodi più freddi. Con il passare del tempo il fascio di linee si è sposta v progressivamente verso l'alto, superando la soglia positiva e raggiungendo valori compresi tra 1 e 1.5 sopra la media di riferimento.
-
+Questa visualizzazione artistica dei dati climatici della NASA rappresenta i mesi dell'anno sull'asse orizzontale e le anomalie termiche su quello verticale, tracciando ogni singolo anno dal 1880 al 2025 come una linea spezzata continua. La scala cromatica passa dai toni caldi del giallo dei primi anni dello studio, fino alle sfumature più scure di viola degli anni recenti. Attraverso questo grafico, si nota chiaramente come le temperature si siano progressivamente innalzate: le linee dei primi anni si mantengono sotto lo zero, indicando anomalie negative e quindi periodi più freddi. Con il passare del tempo il fascio di linee si è sposta progressivamente verso l'alto, superando la soglia positiva e raggiungendo valori compresi tra 1 e 1.5 sopra la media di riferimento.
 
 ```{r}
 annual_bars <- temp |>
@@ -88,9 +85,13 @@ ggplot(annual_bars, aes(x = Year, y = mean_anomaly, fill = mean_anomaly)) +
     midpoint = 0,
     name = "Anomalia"
   ) +
-  theme_void() 
+  theme_void() +
+  theme(
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = "white", color = NA),
+  )
 
-ggsave("art2.png", width = 10, height = 7, dpi = 300)
+ggsave("grafico2.png", width = 10, height = 7, dpi = 300)
 ```
 
 In questa seconda opera si può osservare l'evoluzione temporale delle anomalie termiche medie di ogni anno. La scala cromatica e l'orientamento delle barre rendono evidente il drastico cambiamento climatico: nella prima parte, le barre blu sono rivolte verso il basso e indicano anomalie negative, testimoniando periodi storicamente più freddi. Man mano che si procede lungo la sequenza, si nota una crescita esponenziale, e le ultime colonne diventano sempre più alte e di un rosso intenso, evidenziando visivamente come le temperature globali siano notevolmente più elevate rispetto al secolo scorso.
