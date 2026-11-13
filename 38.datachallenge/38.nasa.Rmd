@@ -60,46 +60,30 @@ ggplot(temp, aes(x = month, y = anomaly, group = Year, color = Year)) +
     option = "inferno", 
     direction = -1
   ) +
+  labs(
+    title = "Cambiamento anomalie delle temperature negli anni"
+  ) +
   theme_void() +
   theme(
-    plot.background = element_rect(fill = "white", color = NA),
-    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white"),
+    panel.background = element_rect(fill = "white"),
+    plot.margin = margin(20, 20, 20, 20),
+    plot.title = element_text(
+      hjust = 0.5,             
+      face = "bold",           
+      size = 14,               
+      margin = margin(b = 15)
+    )
   )
 
-ggsave("grafico1.png", width = 10, height = 7, dpi = 300)
+ggsave("art1.png", width = 12, height = 12, dpi = 300)
 ```
 
 Questa visualizzazione artistica dei dati climatici della NASA rappresenta i mesi dell'anno sull'asse orizzontale e le anomalie termiche su quello verticale, tracciando ogni singolo anno dal 1880 al 2025 come una linea spezzata continua. La scala cromatica passa dai toni caldi del giallo dei primi anni dello studio, fino alle sfumature più scure di viola degli anni recenti. Attraverso questo grafico, si nota chiaramente come le temperature si siano progressivamente innalzate: le linee dei primi anni si mantengono sotto lo zero, indicando anomalie negative e quindi periodi più freddi. Con il passare del tempo il fascio di linee si è sposta progressivamente verso l'alto, superando la soglia positiva e raggiungendo valori compresi tra 1 e 1.5 sopra la media di riferimento.
 
-```{r}
-annual_bars <- temp |>
-  group_by(Year) |>
-  summarise(mean_anomaly = mean(anomaly, na.rm = TRUE), .groups = "drop")
 
-ggplot(annual_bars, aes(x = Year, y = mean_anomaly, fill = mean_anomaly)) +
-  geom_col(width = 0.8) +
-  scale_fill_gradient2(
-    low = "#2166AC",
-    mid = "white",        
-    high = "#B2182B",
-    midpoint = 0,
-    name = "Anomalia"
-  ) +
-  theme_void() +
-  theme(
-    plot.background = element_rect(fill = "white", color = NA),
-    panel.background = element_rect(fill = "white", color = NA),
-  )
-
-ggsave("grafico2.png", width = 10, height = 7, dpi = 300)
-```
-
-In questa seconda opera si può osservare l'evoluzione temporale delle anomalie termiche medie di ogni anno. La scala cromatica e l'orientamento delle barre rendono evidente il drastico cambiamento climatico: nella prima parte, le barre blu sono rivolte verso il basso e indicano anomalie negative, testimoniando periodi storicamente più freddi. Man mano che si procede lungo la sequenza, si nota una crescita esponenziale, e le ultime colonne diventano sempre più alte e di un rosso intenso, evidenziando visivamente come le temperature globali siano notevolmente più elevate rispetto al secolo scorso.
 
 ```{r}
-library(tidyverse)
-
-# 1. Filtriamo gli anni e teniamo i mesi ordinati
 monthly_grid <- temp |>
   mutate(
     month = factor(month, levels = month.abb)
@@ -115,14 +99,32 @@ ggplot(monthly_grid, aes(x = month, y = 1, fill = anomaly)) +
     midpoint = 0,
     guide = "none"
   ) +
+  labs(
+    title = "Il mosaico del cambiamento climatico",
+    subtitle = "le anomalie delle temperature dal 1880 al 2025"
+  ) +
   theme_void() +
   theme(
     plot.margin = margin(20, 20, 20, 20),
-    plot.background = element_blank(),
-    strip.text = element_blank(), 
+    plot.background = element_rect(fill = "white", color = NA),,
+    panel.background = element_rect(fill = "white"),
+    strip.text = element_blank(),
     panel.spacing.x = unit(0.1, "cm"),
-    panel.spacing.y = unit(0.1, "cm")
+    panel.spacing.y = unit(0.1, "cm"),
+    plot.title = element_text(
+      hjust = 0.5,             
+      face = "bold",           
+      size = 14,               
+      margin = margin(b = 10)
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5,             
+      size = 10,               
+      margin = margin(b = 15)
+    )
   )
 
-ggsave("grafico3.png", width = 12, height = 8, dpi = 300)
+ggsave("mosaico.png", width = 12, height = 12, dpi = 300)
 ```
+
+In questa opera si può osservare un mosaico in cui ogni rettangolo rappresenta un mese da gennaio 1880 a ottobre 2025 e sono colorati i modo gradiente dal blu degli anni più freddi, al bianco per gli anni centrali (periodo di riferimento per il calcolo delle anomalie) fino ad arrivare al rosso intenso degli ultimi anni, a testimoniare l'innalzamento delle temperature
